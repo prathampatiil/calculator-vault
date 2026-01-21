@@ -21,9 +21,15 @@ class PinService {
   Future<bool> verifyPin(String input) async {
     final file = await _pinFile();
     if (!await file.exists()) {
-      await savePin("1234");
+      await savePin("1234"); // default fallback
     }
     final stored = await file.readAsString();
     return stored == _hash(input);
+  }
+
+  // ✅ ADD THIS METHOD
+  Future<bool> pinExists() async {
+    final file = await _pinFile();
+    return file.exists();
   }
 }
