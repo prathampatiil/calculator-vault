@@ -16,9 +16,15 @@ class StorageService {
     return dir.listSync().whereType<File>().toList();
   }
 
+  // ✅ SAFE IMAGE SAVE
   Future<File> saveImage(File source) async {
     final dir = await _vaultDir();
     final name = DateTime.now().millisecondsSinceEpoch;
-    return source.copy("${dir.path}/$name.jpg");
+    final target = File("${dir.path}/$name.jpg");
+
+    final bytes = await source.readAsBytes();
+    await target.writeAsBytes(bytes, flush: true);
+
+    return target;
   }
 }

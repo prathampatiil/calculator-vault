@@ -1,44 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/vault_controller.dart';
-import '../services/pin_service.dart';
 
 class VaultView extends StatelessWidget {
   VaultView({super.key});
 
   final controller = Get.put(VaultController());
-  final pinService = PinService();
 
-  void _changePin() {
-    final pinController = TextEditingController();
+  void _confirmDelete() {
+    if (controller.selected.isEmpty) return;
 
     Get.defaultDialog(
-      title: "Change PIN",
-      content: Column(
-        children: [
-          TextField(
-            controller: pinController,
-            keyboardType: TextInputType.number,
-            obscureText: true,
-            maxLength: 6,
-            decoration: const InputDecoration(hintText: "Enter new PIN"),
-          ),
-          const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: () async {
-              final pin = pinController.text.trim();
-              if (pin.length < 4) {
-                Get.snackbar("Invalid PIN", "Minimum 4 digits required");
-                return;
-              }
-              await pinService.savePin(pin);
-              Get.back();
-              Get.snackbar("Success", "PIN changed successfully");
-            },
-            child: const Text("Save"),
-          ),
-        ],
-      ),
+      title: "Delete Images",
+      middleText: "Delete ${controller.selected.length} selected image(s)?",
+      textConfirm: "Delete",
+      textCancel: "Cancel",
+      confirmTextColor: Colors.white,
+      onConfirm: () async {
+        await controller.deleteSelected();
+        Get.back();
+      },
     );
   }
 
@@ -46,13 +27,26 @@ class VaultView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Hidden Vault"),
+        title: Obx(
+          () => Text(
+            controller.selected.isEmpty
+                ? "Hidden Vault"
+                : "${controller.selected.length} selected",
+          ),
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.lock), onPressed: _changePin),
+          Obx(
+            () => controller.selected.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: _confirmDelete,
+                  )
+                : const SizedBox(),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: controller.pickImage,
+        onPressed: controller.pickImages,
         child: const Icon(Icons.add),
       ),
       body: Obx(() {
@@ -70,9 +64,33 @@ class VaultView extends StatelessWidget {
           ),
           itemBuilder: (_, i) {
             final photo = controller.images[i];
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(photo.file, fit: BoxFit.cover),
+            final isSelected = controller.isSelected(photo);
+
+            return GestureDetector(
+              onLongPress: () {
+                controller.toggleSelection(photo);
+              },
+              onTap: () {
+                if (controller.selected.isNotEmpty) {
+                  controller.toggleSelection(photo);
+                }
+              },
+              child: Stack(
+                children: [
+                  Image.file(photo.file, fit: BoxFit.cover),
+                  if (isSelected)
+                    Container(
+                      color: Colors.black54,
+                      child: const Center(
+                        child: Icon(
+                          Icons.check_circle,
+                          color: Colors.white,
+                          size: 40,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             );
           },
         );
