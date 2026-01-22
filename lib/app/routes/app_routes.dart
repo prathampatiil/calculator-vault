@@ -1,5 +1,6 @@
 class AppRoutes {
   static const lock = "/lock";
   static const calculator = "/";
-  static const vault = "/vault"; // will receive parameter
+  static const vault = "/vault"; // receives vaultId parameter
+  static const secrets = "/secrets"; // ✅ Secret Manager screen
 }

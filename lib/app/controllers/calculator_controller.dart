@@ -73,11 +73,11 @@ class CalculatorController extends GetxController {
   // ---------------- SECRET VAULT CHECK ----------------
   Future<void> _checkSecretVault() async {
     final expression = display.value.replaceAll(" ", "");
-    final vaultId = await secretService.findVault(expression);
+    final entry = await secretService.findVault(expression);
 
-    if (vaultId != null) {
+    if (entry != null) {
       _reset();
-      Get.toNamed("${AppRoutes.vault}?vaultId=$vaultId");
+      Get.toNamed("${AppRoutes.vault}?vaultId=${entry.vaultId}");
     }
   }
 

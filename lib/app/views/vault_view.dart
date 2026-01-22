@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../controllers/vault_controller.dart';
 import '../services/secret_service.dart';
+import '../routes/app_routes.dart';
 
 class VaultView extends StatelessWidget {
   VaultView({super.key});
@@ -12,29 +13,45 @@ class VaultView extends StatelessWidget {
 
   // ---------------- ADD SECRET DIALOG ----------------
   void _addSecretDialog() {
-    final textController = TextEditingController();
+    final expressionController = TextEditingController();
+    final nameController = TextEditingController();
 
     Get.defaultDialog(
-      title: "Add Secret Expression",
+      title: "Add Secret Vault",
       content: Column(
         children: [
           TextField(
-            controller: textController,
-            decoration: const InputDecoration(hintText: "Example: 2+2"),
+            controller: expressionController,
+            decoration: const InputDecoration(
+              labelText: "Secret Expression",
+              hintText: "Example: 2+2",
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+          TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              labelText: "Vault Name",
+              hintText: "Example: Personal Photos",
+            ),
+          ),
+          const SizedBox(height: 14),
           ElevatedButton(
             onPressed: () async {
-              final expression = textController.text.trim();
-              if (expression.isEmpty) return;
+              final expression = expressionController.text.trim();
+              final name = nameController.text.trim();
 
-              // Each vault gets unique ID
+              if (expression.isEmpty || name.isEmpty) {
+                Get.snackbar("Error", "Please fill all fields");
+                return;
+              }
+
               final vaultId = DateTime.now().millisecondsSinceEpoch.toString();
 
-              await secretService.addSecret(expression, vaultId);
+              await secretService.addSecret(expression, vaultId, name);
 
               Get.back();
-              Get.snackbar("Success", "Secret added successfully");
+              Get.snackbar("Success", "Secret vault created");
             },
             child: const Text("Save"),
           ),
@@ -76,10 +93,16 @@ class VaultView extends StatelessWidget {
           ),
         ),
         actions: [
-          // ➕ Add Secret Button (always visible)
+          // ⚙ Settings → Secret Manager
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => Get.toNamed(AppRoutes.secrets),
+          ),
+
+          // ➕ Add Secret
           IconButton(icon: const Icon(Icons.add), onPressed: _addSecretDialog),
 
-          // 🗑 Delete Button (only when selection exists)
+          // 🗑 Delete Selected
           Obx(
             () => controller.selected.isNotEmpty
                 ? IconButton(
