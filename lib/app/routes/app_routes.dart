@@ -1,5 +1,5 @@
 class AppRoutes {
   static const lock = "/lock";
   static const calculator = "/";
-  static const vault = "/vault";
+  static const vault = "/vault"; // will receive parameter
 }

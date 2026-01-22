@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../routes/app_routes.dart';
 import '../services/pin_service.dart';
+import '../services/secret_service.dart';
 
 class CalculatorController extends GetxController {
   final display = "0".obs;
@@ -11,13 +12,22 @@ class CalculatorController extends GetxController {
   bool isNewInput = true;
 
   final pinService = PinService();
+  final secretService = SecretService();
+
   String pinBuffer = "";
 
-  void onButtonPress(String value) {
+  // ---------------- BUTTON HANDLER ----------------
+  Future<void> onButtonPress(String value) async {
     _trackPin(value);
 
     if (value == "C") {
       _reset();
+      return;
+    }
+
+    // ⌫ Backspace
+    if (value == "⌫") {
+      _backspace();
       return;
     }
 
@@ -26,6 +36,7 @@ class CalculatorController extends GetxController {
     } else if (_isOperator(value)) {
       _handleOperator(value);
     } else if (value == "=") {
+      await _checkSecretVault(); // 🔐 dynamic secrets
       _calculate();
     }
   }
@@ -41,7 +52,32 @@ class CalculatorController extends GetxController {
 
     if (await pinService.verifyPin(pinBuffer)) {
       pinBuffer = "";
-      Get.toNamed(AppRoutes.vault);
+      Get.toNamed("${AppRoutes.vault}?vaultId=default");
+    }
+  }
+
+  // ---------------- BACKSPACE ----------------
+  void _backspace() {
+    if (currentInput.isNotEmpty) {
+      currentInput = currentInput.substring(0, currentInput.length - 1);
+    } else if (operator != null) {
+      operator = null;
+    } else if (storedValue != null) {
+      currentInput = _format(storedValue!);
+      storedValue = null;
+    }
+
+    _updateDisplay();
+  }
+
+  // ---------------- SECRET VAULT CHECK ----------------
+  Future<void> _checkSecretVault() async {
+    final expression = display.value.replaceAll(" ", "");
+    final vaultId = await secretService.findVault(expression);
+
+    if (vaultId != null) {
+      _reset();
+      Get.toNamed("${AppRoutes.vault}?vaultId=$vaultId");
     }
   }
 
@@ -60,11 +96,11 @@ class CalculatorController extends GetxController {
 
   // ---------------- OPERATOR INPUT ----------------
   void _handleOperator(String op) {
-    // Case: First operator
+    // First operator
     if (storedValue == null && currentInput.isNotEmpty) {
       storedValue = double.tryParse(currentInput);
     }
-    // Case: Continuous calculation
+    // Continuous calculation
     else if (storedValue != null &&
         currentInput.isNotEmpty &&
         operator != null) {
@@ -76,11 +112,9 @@ class CalculatorController extends GetxController {
 
     operator = op;
 
-    // Reset input for next number
     currentInput = "";
     isNewInput = true;
 
-    // ✅ Show intermediate result + operator
     display.value = "${_format(storedValue ?? 0)}$operator";
   }
 
@@ -95,7 +129,6 @@ class CalculatorController extends GetxController {
 
     display.value = _format(result);
 
-    // Prepare for next chain
     storedValue = result;
     operator = null;
     currentInput = "";
@@ -141,14 +174,8 @@ class CalculatorController extends GetxController {
   void _updateDisplay() {
     final buffer = StringBuffer();
 
-    if (storedValue != null) {
-      buffer.write(_format(storedValue!));
-    }
-
-    if (operator != null) {
-      buffer.write(operator);
-    }
-
+    if (storedValue != null) buffer.write(_format(storedValue!));
+    if (operator != null) buffer.write(operator);
     buffer.write(currentInput);
 
     display.value = buffer.isEmpty ? "0" : buffer.toString();
